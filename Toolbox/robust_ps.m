@@ -452,8 +452,6 @@ function [XYZ,N,rho,Phi,S,mask,tab_nrj] = robust_ps(data,calib,params)
 		px_rep(:) = 0;
 		py_rep(:) = 0;
 	end
-	Dx_rep = repmat(Dx,[nimgs 1]);
-	Dy_rep = repmat(Dy,[nimgs 1]);
 	% Vectorize data
 	I = reshape(I,nrows*ncols,nimgs,nchannels);
 	I = I(imask,:,:);
@@ -498,7 +496,7 @@ function [XYZ,N,rho,Phi,S,mask,tab_nrj] = robust_ps(data,calib,params)
 	
 	%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 	%%% Initial energy
-	shading_fcn = @(z,S) (spdiags(reshape(bsxfun(@minus,fx*transpose(S(:,1)),bsxfun(@times,px_rep,transpose(S(:,3)))),npix*nimgs,1),0,npix*nimgs,npix*nimgs)*Dx_rep+spdiags(reshape(bsxfun(@minus,fy*transpose(S(:,2)),bsxfun(@times,py_rep,transpose(S(:,3)))),npix*nimgs,1),0,npix*nimgs,npix*nimgs)*Dy_rep)*z-reshape(transpose(repmat(S(:,3),[1 npix])),npix*nimgs,1);
+	shading_fcn = @(z,S) (spdiags(reshape(bsxfun(@minus,fx*transpose(S(:,1)),bsxfun(@times,px_rep,transpose(S(:,3)))),npix*nimgs,1),0,npix*nimgs,npix*nimgs)*repmat(Dx,[nimgs 1])+spdiags(reshape(bsxfun(@minus,fy*transpose(S(:,2)),bsxfun(@times,py_rep,transpose(S(:,3)))),npix*nimgs,1),0,npix*nimgs,npix*nimgs)*repmat(Dy,[nimgs 1]))*z-reshape(transpose(repmat(S(:,3),[1 npix])),npix*nimgs,1);
 	r_fcn = @(rho,shadz,II) repmat(rho,[nimgs 1]).*psi_fcn(shadz)-II; % residual
 	J_fcn = @(rho,shadz,II) sum(phi_fcn(r_fcn(rho,shadz,II))); % energy
 	energy = 0;
@@ -509,6 +507,7 @@ function [XYZ,N,rho,Phi,S,mask,tab_nrj] = robust_ps(data,calib,params)
 		Ich = I(:,:,ch);
 		energy = energy+J_fcn(rho_tilde(:,ch),psich(:),Ich(:));
 	end
+	clear Ich psich
 	disp(sprintf('== it. 0 - energy : %.20f',energy));
 	disp(' ');
 	tab_nrj(1) = energy;
@@ -549,13 +548,11 @@ function [XYZ,N,rho,Phi,S,mask,tab_nrj] = robust_ps(data,calib,params)
 		axis off
 		title('Normals')
 		drawnow
-	end		
+	end
 
 	for it = 1:maxit
-		r = zeros(npix,nimgs,nchannels);
 		w = zeros(npix,nimgs,nchannels);
 		chi = chi_fcn(psi);
-		phi_chi = psi.*chi;
 
 		% Intensities update
 		if(semi_calibrated)
@@ -563,9 +560,8 @@ function [XYZ,N,rho,Phi,S,mask,tab_nrj] = robust_ps(data,calib,params)
 			for ch = 1:nchannels
 				Ich = I(:,:,ch);
 				psich = psi(:,:,ch);
-				r(:,:,ch) = reshape(r_fcn(rho_tilde(:,ch),psich(:),Ich(:)),npix,nimgs);
-				w(:,:,ch) = w_fcn(r(:,:,ch));
-				rho_psi_chi = phi_chi(:,:,ch).*repmat(rho_tilde(:,ch),[1 nimgs]);
+				w(:,:,ch) = w_fcn(reshape(r_fcn(rho_tilde(:,ch),psich(:),Ich(:)),npix,nimgs));
+				rho_psi_chi = psi(:,:,ch).*chi(:,:,ch).*repmat(rho_tilde(:,ch),[1 nimgs]);
 				Phi_rel(:,ch) = transpose(((sum(w(:,:,ch).*I(:,:,ch).*rho_psi_chi,1)))./(sum(w(:,:,ch).*(rho_psi_chi).^2,1)));
 				I(:,:,ch) = bsxfun(@rdivide,I(:,:,ch),transpose(Phi_rel(:,ch)));
 				Phi(:,ch) = Phi(:,ch).*Phi_rel(:,ch);
@@ -574,35 +570,36 @@ function [XYZ,N,rho,Phi,S,mask,tab_nrj] = robust_ps(data,calib,params)
 			I = I./max_I;
 			Phi = Phi./max_I;
 		end
+		clear Ich psich rho_psi_chi
 		
 		% Pseudo-albedo update
 		for ch = 1:nchannels
 			Ich = I(:,:,ch);
 			psich = psi(:,:,ch);
-			phi_chich = phi_chi(:,:,ch);
-			r(:,:,ch) = reshape(r_fcn(rho_tilde(:,ch),psich(:),Ich(:)),npix,nimgs);
-			w(:,:,ch) = w_fcn(r(:,:,ch));
+			phi_chich = psi(:,:,ch).*chi(:,:,ch);
+			w(:,:,ch) = w_fcn(reshape(r_fcn(rho_tilde(:,ch),psich(:),Ich(:)),npix,nimgs));
 			denom = (sum(w(:,:,ch).*(phi_chich).^2,2));
 			idx_ok = find(denom>0);
 			rho_tilde(idx_ok,ch) = (sum(w(idx_ok,:,ch).*I(idx_ok,:,ch).*phi_chich(idx_ok,:),2))./denom(idx_ok);
 		end
+		clear psich phi_chich Ich
 
 		% Log-depth update
 		rho_rep = zeros(npix,nimgs*nchannels);
 		for ch = 1:nchannels
 			Ich = I(:,:,ch);
 			psich = psi(:,:,ch);
-			r(:,:,ch) = reshape(r_fcn(rho_tilde(:,ch),psich(:),Ich(:)),npix,nimgs);
+			w(:,:,ch) = w_fcn(reshape(r_fcn(rho_tilde(:,ch),psich(:),Ich(:)),npix,nimgs));
 			rho_rep(:,(ch-1)*nimgs+1:ch*nimgs) = repmat(rho_tilde(:,ch),[1 nimgs]);
 		end
-		w = w_fcn(r);		
-
+		
 		D = reshape(chi,npix,nimgs*nchannels).*(rho_rep.^2).*reshape(w,npix,nimgs*nchannels);
+		clear rho_rep
 
 		A = [];
 		rhs = [];
 		for ch = 1:nchannels
-			A =[A;(spdiags(reshape(bsxfun(@minus,fx*transpose(S(:,1,ch)),bsxfun(@times,px_rep,transpose(S(:,3,ch)))),npix*nimgs,1),0,npix*nimgs,npix*nimgs)*Dx_rep+spdiags(reshape(bsxfun(@minus,fy*transpose(S(:,2,ch)),bsxfun(@times,py_rep,transpose(S(:,3,ch)))),npix*nimgs,1),0,npix*nimgs,npix*nimgs)*Dy_rep)];
+			A =[A;(spdiags(reshape(bsxfun(@minus,fx*transpose(S(:,1,ch)),bsxfun(@times,px_rep,transpose(S(:,3,ch)))),npix*nimgs,1),0,npix*nimgs,npix*nimgs)*repmat(Dx,[nimgs 1])+spdiags(reshape(bsxfun(@minus,fy*transpose(S(:,2,ch)),bsxfun(@times,py_rep,transpose(S(:,3,ch)))),npix*nimgs,1),0,npix*nimgs,npix*nimgs)*repmat(Dy,[nimgs 1]))];
 			rho_rep_ch = repmat(rho_tilde(:,ch),[1 nimgs]);
 			%~ rhs_ch = chi(:,:,ch).*rho_rep_ch.*(rho_rep_ch.*(-psi(:,:,ch))+I(:,:,ch)).*w(:,:,ch);
 			rhs_ch = chi(:,:,ch).*rho_rep_ch.*(bsxfun(@times,rho_rep_ch,transpose(S(:,3,ch)))+I(:,:,ch)).*w(:,:,ch);
@@ -610,9 +607,9 @@ function [XYZ,N,rho,Phi,S,mask,tab_nrj] = robust_ps(data,calib,params)
 		end
 		At = transpose(A);
 		M = At*spdiags(D(:),0,nimgs*npix*nchannels,nimgs*npix*nchannels)*A;
-		M = M+smooth*Lap;
-		
+		M = M+smooth*Lap;		
 		rhs = At*rhs(:);
+		clear A At rho_rep_ch rhs_ch
 		
 		% Set control points
 		if(npix_control>0)
@@ -688,18 +685,21 @@ function [XYZ,N,rho,Phi,S,mask,tab_nrj] = robust_ps(data,calib,params)
 				Ich = I(:,:,ch);
 				psich = psi(:,:,ch);
 				rho_rep = repmat(rho_tilde(:,ch),[1 nimgs]);
-				r(:,:,ch) = reshape(r_fcn(rho_tilde(:,ch),psich(:),Ich(:)),npix,nimgs);
-				w(:,:,ch) = w_fcn(r(:,:,ch));
+				w(:,:,ch) = w_fcn(reshape(r_fcn(rho_tilde(:,ch),psich(:),Ich(:)),npix,nimgs));
+				clear psich
 				% Aliases
 				w_rho_chi = w(:,:,ch).*rho_rep.*chi(:,:,ch);
 				w_rho2_chi2 = w_rho_chi.*rho_rep.*chi(:,:,ch);
+				clear rho_rep
 				
 				% Construct second members
 				w_rho_chi_I = w_rho_chi.*I(:,:,ch);
+				clear w_rho_chi
 				w_rho_chi_I_N = [sum(bsxfun(@times,w_rho_chi_I,Nx(imask)),1);
 								sum(bsxfun(@times,w_rho_chi_I,Ny(imask)),1);...
 								sum(bsxfun(@times,w_rho_chi_I,Nz(imask)),1)];
 				sec_mb =  reshape(w_rho_chi_I_N,[3*nimgs,1]);
+				clear w_rho_chi_I w_rho_chi_I_N
 				
 				% Construct matrices 
 				mat_i_11 = sum(bsxfun(@times,w_rho2_chi2,NNt_11),1);
@@ -708,6 +708,7 @@ function [XYZ,N,rho,Phi,S,mask,tab_nrj] = robust_ps(data,calib,params)
 				mat_i_22 = sum(bsxfun(@times,w_rho2_chi2,NNt_22),1);
 				mat_i_23 = sum(bsxfun(@times,w_rho2_chi2,NNt_23),1);
 				mat_i_33 = sum(bsxfun(@times,w_rho2_chi2,NNt_33),1);
+				clear w_rho2_chi2
 				rows_mat_i = [1:3:3*nimgs-2 1:3:3*nimgs-2 1:3:3*nimgs-2 2:3:3*nimgs-1 2:3:3*nimgs-1 2:3:3*nimgs-1 3:3:3*nimgs 3:3:3*nimgs 3:3:3*nimgs];
 				cols_mat_i = [1:3:3*nimgs-2 2:3:3*nimgs-1 3:3:3*nimgs 1:3:3*nimgs-2 2:3:3*nimgs-1 3:3:3*nimgs 1:3:3*nimgs-2 2:3:3*nimgs-1 3:3:3*nimgs];
 				mat_i = sparse(rows_mat_i,cols_mat_i,[mat_i_11 mat_i_12 mat_i_13 mat_i_12 mat_i_22 mat_i_23 mat_i_13 mat_i_23 mat_i_33]); 
@@ -717,10 +718,7 @@ function [XYZ,N,rho,Phi,S,mask,tab_nrj] = robust_ps(data,calib,params)
 			end
 			% update chi
 			chi = chi_fcn(psi);
-			phi_chi = psi.*chi;
 		end
-		
-
 		
 
 		% Convergence test
