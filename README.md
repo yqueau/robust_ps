@@ -82,7 +82,6 @@ The following demo files are provided:
 
 - `demo_3_semicalibrated_color_robust_ps.m` : same, using automatic lighting refinement. Results are now quite good.  
 
-- `demo_4_doll.m` : test on a more complicated dataset (no mask, specular, strong discontinuities...). Illustrates RGB images, box constraint, regularization, and control points (here, a boundary condition).
  
 
 ## Dependencies
