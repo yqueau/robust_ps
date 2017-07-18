@@ -48,6 +48,8 @@ function [XYZ,N,rho,Phi,S,mask,tab_nrj] = robust_ps(data,calib,params)
 %
 %	=== PARAMETERS ===
 %	- Optional fields:
+%		- PARAMS.prior: prior parameter
+%			(default: 0)
 %		- PARAMS.smooth: smoothing parameter
 %			(default: 0)
 %		- PARAMS.semi_calibrated: binary variable indicating if
@@ -154,7 +156,7 @@ function [XYZ,N,rho,Phi,S,mask,tab_nrj] = robust_ps(data,calib,params)
 		return;
 	end
 	% Check intrinsics
-	if(~isfield(calib,'K'))
+	if(~isfield(calib,'K')|size(calib.K,1)==0)
 		disp('Warning: intrinsics not provided in CALIB.K - using orthographic projection')
 		calib.K = [1,0,0.5*size(I,2);0,1,0.5*size(I,1);0,0,1];
 		orthographic = 1;
@@ -188,7 +190,16 @@ function [XYZ,N,rho,Phi,S,mask,tab_nrj] = robust_ps(data,calib,params)
 	%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 	%%% Check PARAMS
 	if(~exist('params','var')|isempty(params)) params=[]; end;
-	% Check initial depth
+	% Check prior
+	if(~isfield(params,'prior'))
+		disp('WARNING: prior not provided in PARAMS.prior, using default values')
+		params.prior = 0e0;
+	end
+	prior = params.prior; clear params.prior;
+	if(prior<0)
+		disp(sprintf('ERROR: prior should be positive'));
+	end
+	% Check smooth
 	if(~isfield(params,'smooth'))
 		disp('WARNING: smooth not provided in PARAMS.smooth, using default values')
 		params.smooth = 0e0;
@@ -429,8 +440,8 @@ function [XYZ,N,rho,Phi,S,mask,tab_nrj] = robust_ps(data,calib,params)
 	
 	% Scaled pixel units
 	[uu,vv] = meshgrid(1:ncols,1:nrows);
-	u_tilde = (uu - x0)./fx; 
-	v_tilde = (vv - y0)./fy;
+	u_tilde = (uu - x0); 
+	v_tilde = (vv - y0);
 	clear uu vv x0 y0
 	% Control points
 	imask = find(mask>0);
@@ -469,12 +480,14 @@ function [XYZ,N,rho,Phi,S,mask,tab_nrj] = robust_ps(data,calib,params)
 	z(mask==0) = NaN;
 	if(orthographic)
 		z_tilde = z(imask);
+		z0 = z0(imask);
 		zmax = zmax(imask);
-		XYZ = cat(3,u_tilde,v_tilde,z);
+		XYZ = cat(3,u_tilde./fx,v_tilde./fy,z);
 	else
+		z0 = log(z0(imask));
 		z_tilde = log(z(imask));
 		zmax = log(zmax(imask));
-		XYZ = cat(3,z.*u_tilde,z.*v_tilde,z);
+		XYZ = cat(3,z.*u_tilde./fx,z.*v_tilde./fy,z);
 	end
 	rho = ones(nrows,ncols,nchannels);
 	rho_tilde = ones(npix,nchannels); 
@@ -607,8 +620,8 @@ function [XYZ,N,rho,Phi,S,mask,tab_nrj] = robust_ps(data,calib,params)
 		end
 		At = transpose(A);
 		M = At*spdiags(D(:),0,nimgs*npix*nchannels,nimgs*npix*nchannels)*A;
-		M = M+smooth*Lap;		
-		rhs = At*rhs(:);
+		M = M+smooth*Lap+prior*speye(npix);		
+		rhs = At*rhs(:)+prior*z0;
 		clear A At rho_rep_ch rhs_ch
 		
 		% Set control points
@@ -669,7 +682,7 @@ function [XYZ,N,rho,Phi,S,mask,tab_nrj] = robust_ps(data,calib,params)
 		if(orthographic)
 			XYZ = cat(3,u_tilde,v_tilde,z);
 		else
-			XYZ = cat(3,z.*u_tilde,z.*v_tilde,z);
+			XYZ = cat(3,z.*u_tilde./fx,z.*v_tilde./fy,z);
 		end
 		
 		%%% Update S
