@@ -3,7 +3,7 @@ Code for robust nonconvex photometric stereo, under calibrated or inacurrate dir
 
 ## Introduction
 
-These Matlab codes implement the method for robust nonconvex photometric stereo described in [1,2]. Given a set of photometric stereo images of a still scene acquired from a (pinhole or orthographic camera) camera, and (possibly inaccurate)  lightin parameters, this algorithm estimates depth, normals, albedo and, optionally, refined lightings. It can output a colored mesh in the .obj format. 
+These Matlab codes implement the method for robust nonconvex photometric stereo described in [1]. Given a set of photometric stereo images of a still scene acquired from a (pinhole or orthographic camera) camera, and (possibly inaccurate)  lightin parameters, this algorithm estimates depth, normals, albedo and, optionally, refined lightings. It can output a colored mesh in the .obj format. 
 
 Features:
 - Several datasets
@@ -19,11 +19,15 @@ Please cite the above work if using the provided codes and/or datasets for your 
 
 Author: Yvain Quéau, Technical University Munich, yvain.queau@tum.de
 
-Credits: Datasets provided by the Photosculptura company: https://www.photosculptura.nl/
+Credits:
+- Dataset 'Ball' provided by the Photosculptura company: https://www.photosculptura.nl/
+- Dataset 'Ball_DiliGenT' part of the DiliGenT benchmark by Boxin Shi et al.: https://sites.google.com/site/photometricstereodata/
 
 ## Datasets
 
-- The `Datasets/` folder contains two datasets: a soccer ball painted with diffuse white painting, and a plastic doll. Each dataset contains 6 images, plus a calib.mat file containing roughly calibrated lightings and camera parameters. For the ball dataset, a mask is also provided. 
+- The `Datasets/` folder contains two datasets: a soccer ball painted with diffuse white painting, and a specular ball. Each dataset contains a set of images + mask, and a calib.mat file containing roughly calibrated lightings and camera parameters. The 'Ball_DiliGenT' dataset also contains ground truth normals
+
+- Note: for the 'Ball_DiliGenT', signs of axes y and z are changed (for both lighting and ground truth normals), in comparison with the original dataset. 
 
 ## Usage
 
@@ -53,7 +57,7 @@ Inputs:
 - a param structure containing optional parameters. We strongly recommend to play a bit with the following parameters:
   * params.z0 is the initial depth. We advise to roughly (visually) estimate the distance from camera to object in mm, and set z0 to a constant matrix with this rough distance 
   * params.estimator sets the estimator. LS (least-squares) is a good initial choice, but robust M-estimators may be more accurate, though they require the parameter lambda to be set
-  * params.lambda sets the M-estimator parameter. For Cauchy estimator, we use 0.1 in our datasets. L1 norm optimization is achieved by setting Lp as estimator, and 1 for lambda
+  * params.lambda sets the M-estimator parameter. For Cauchy estimator, 0.02 < lambda < 0.2 seems reasonable. Lp norm optimization is achieved by setting Lp as estimator, and p for lambda.
   * params.self_shadows includes self-shadows in  the model or not
   * params.semi_calibrated enables automatic intensity refinement
   * params.uncalibrated enables automatic lighting vectors refinement
@@ -76,11 +80,10 @@ The inner conjugate gradient iterations can be controlled by:
 
 The following demo files are provided: 
 
-- `demo_1_nonrobust_calibrated_ball.m` : demo of fast calibrated PS using graylevel-converted images, least-squares estimator, no self-shadows modeling, and image downsampling. 
+- `demo_Ball_DiligenT.m` : demo on the Benchmark from Shi et al., with comparison to ground truth. It is interesting to first do least-squares ('LS') without self-shadows and light refinement, then replace by robust estimator (e.g. 'Lp' with lambda = 0.4), and finally add the lighting refinement option. With each new feature, error is decreased. 
 
-- `demo_2_calibrated_color_robust_ps.m` : same, using robust estimation (Cauchy M-estimator + explicit self-shadows handling). Better results, but somewhat biased by the wrong calibration
+- `demo_football_ball.m` : demo on the football ball. Lighting is set very roughly, and the images are prone to strong shadowing effects.
 
-- `demo_3_semicalibrated_color_robust_ps.m` : same, using automatic lighting refinement. Results are now quite good.  
 
  
 
