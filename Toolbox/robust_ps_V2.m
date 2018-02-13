@@ -491,7 +491,7 @@ function [XYZ,N,rho,Phi,S,ambient,mask,tab_nrj] = robust_ps_V2(data,calib,params
 		w_fcn = @(x) ones(size(x));
 	elseif(strcmp(estimator,'Cauchy'))
 		phi_fcn = @(x) 0.5*log(1+x.^2/lambda^2);	
-	    w_fcn = @(x) 1./(1+x.^2/lambda^2);
+	    w_fcn = @(x) 1./(lambda^2+x.^2);
 	elseif(strcmp(estimator,'Lp'))
 		thr_norm = 1e-2;
 		phi_fcn = @(x) ((abs(x)).^lambda) ./ (lambda*(thr_norm^(lambda-2)));
