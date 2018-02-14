@@ -76,13 +76,14 @@ If you have a good initial estimate of the shape (e.g., a Kinect prior), then yo
 ## Controlling the non-convex descent
 
 Various options can be set in order to control the behavior of the ARLS algorithm we put forward. Useful parameters are:
+  * params.scales sets the number of pyramid levels. Setting to 1 means no multi-scale strategy. Typical values would be 6 or more.  
   * params.stabilizer adds a proximal gradient term in the descent wrt light (setting to high value is equivalent to not refining lighting, setting to low value may yield convergence issues due to the non-convex nature of the problem)
   * params.maxit sets the maximum number of outer iterations
   * params.tol sets the outer relative stopping criterion on the energy
   * params.tol_normals sets the stopping criterion on the median angular difference between two estimated normal maps, in degrees
   * params.maxit_pcg sets the max number of inner CG iterations within each global iteration
   * params.tol_pcg sets the inner CG iterations relative stopping criterion
-  * params.precond sets the inner CG preconditioner. We strongly recommend to use `cmg` (see Dependencies), but if you want to stick to Matlab's builtin function, use `ichol`
+  * params.precond sets the inner CG preconditioner. If you want to stick to Matlab's builtin function, use `ichol`, `jacobi` or `gs`. For fastest results we recommend to use `cmg` (see Dependencies). 
 
 ## Fast debugging
 

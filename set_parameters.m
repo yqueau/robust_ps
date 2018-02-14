@@ -31,7 +31,8 @@ params.z0 = 2000*ones(size((data.mask))); % Initial depth map: a plane at 2000mm
 params.prior = 1e-6; % Add a quadratic term (z-z0)^2, with weight params.prior. Large values are useful if z0 is already close to the solution, otherwise any small value is fine
 % Non-convex stabilizer for the descent wrt the lighting
 params.stabilizer = 0.1; % Add a penalty |s^(k)-s^(k-1)|^2, weighted by params.stabilizer, to prevent too large descent steps for the lighting
-
+% Number of levels in the multi-scale pyramid
+params.scales = 7; 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % STOPPING CRITERIA
@@ -40,11 +41,11 @@ params.stabilizer = 0.1; % Add a penalty |s^(k)-s^(k-1)|^2, weighted by params.s
 % Stopping criterion 1
 params.maxit = 100; % Stop if this number of iterations is reached
 % Stopping criterion 2
-params.tol = 1e-4; % Stop if the relative absolute variation of the photometric error is below this threshold
+params.tol = 1e-3; % Stop if the relative absolute variation of the photometric error is below this threshold
 % Stopping criterion 3
-params.tol_normals = 0.1; % Stop if the median angular difference between two consecutive estimates is below this threshold (in degrees)
+params.tol_normals = 0.05; % Stop if the median angular difference between two consecutive estimates is below this threshold (in degrees)
 % Preconditioner (CMG PRECONDITIONER CAN BE DOWNLOADED HERE: http://www.cs.cmu.edu/~jkoutis/cmg.html)
-params.precond = 'cmg'; % 'cmg' uses combinatorial multigrid (recommended), 'ichol' uses incomplete cholesky (not recommended)
+params.precond = 'jacobi'; % 'cmg' uses combinatorial multigrid (recommended), 'ichol' uses incomplete cholesky (not recommended)
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % PARAMETERS FOR THE INNER PCG ITERATIONS
@@ -53,7 +54,7 @@ params.precond = 'cmg'; % 'cmg' uses combinatorial multigrid (recommended), 'ich
 % Inner stopping criterion 1
 params.maxit_pcg = 100; % Max number of inner PCG iterations
 % Inner stopping criterion 2
-params.tol_pcg = 1e-6; % Relative residual variation in inner PCG iterations  
+params.tol_pcg = 1e-3; % Relative residual variation in inner PCG iterations  
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % DEBUG OPTIONS
@@ -62,7 +63,7 @@ params.tol_pcg = 1e-6; % Relative residual variation in inner PCG iterations
 % Data reduction
 params.ratio = 1; % Downsample the data by a factor of this for faster results
 % Display 
-params.display = 0; % Display current result at each iteration
+params.display = 1; % Display current result at each iteration
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % EXPERIMENTAL OPTIONS - USE WITH CAUTION

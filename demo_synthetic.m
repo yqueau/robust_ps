@@ -31,12 +31,12 @@ S_GT = bsxfun(@rdivide,S,Phi_GT); % Ground truth light directions
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % Noise added to the calibrated lighting intensities and directions (Gaussian)
-std_intensity_bias = 25; % Standard deviation of the Gausian noise added to the light intensities (in percents of the max source intensity)
+std_intensity_bias = 30; % Standard deviation of the Gausian noise added to the light intensities (in percents of the max source intensity)
 std_direction_bias = 30; % Standard deviation of the Gausian noise added to the light directions (in degrees)
 
 % Noise added to the images (Gaussian + S&P outliers)
-std_noise = 5; % Standard deviation of the Gausian noise (in percents of the max brightness)
-prct_SP = 2; % Number of pixels corrupted by salt and pepper noise (in percents)
+std_noise = 2; % Standard deviation of the Gausian noise (in percents of the max brightness)
+prct_SP = 1; % Number of pixels corrupted by salt and pepper noise (in percents)
 
 % Additive offset added to the image (constant)
 % NOTE: such an ambient light map can be handled either:
