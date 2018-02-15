@@ -103,7 +103,9 @@ In real-world scenarios, calibrating the ambient light is easy: just capture a s
 We strongly recommend to use the CMG preconditioner from Koutis et al., which can be downloaded here: 
 http://www.cs.cmu.edu/~jkoutis/cmg.html
 
-If CMG it is not installed, set the "precond" parameter to "ichol". Standard incomplete Cholesky will be used, which should prevent any error message in Matlab, but may also be super slow or even non-convergent. 
+If CMG it is not installed, set the "precond" parameter to "ichol". Standard incomplete Cholesky will be used, which should prevent any error message in Matlab, but may also be super slow or even non-convergent. Jacobi or Gauss-Seidel can also be quite efficient if the multi-scale strategy is used. They can be selected through `jacobi` or `gs`, respectively. 
+
+For the multi-scale approach, resizing the outputs at each scale is required. We achieve this with Matlab built-in functions, except for the depth extrapolation part which uses the `inpaint_nans` function from https://de.mathworks.com/matlabcentral/fileexchange/4551-inpaint-nans
 
 
 
